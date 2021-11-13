@@ -3,22 +3,27 @@ const bcrypt = require('bcryptjs');
 const Users = require('../users/users-model');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'thisIsTheSecret';
+const { checkUsernameAvailable } = require('./auth-middleware');
 
-router.post('/register', (req, res, next) => {
-  let user = req.body;
-  const rounds = process.env.BCRYPT_ROUNDS || 8;
-  const hash = bcrypt.hashSync(user.password, rounds);
-  user.password = hash;
+router.post('/register', checkUsernameAvailable, (req, res, next) => {
+  if (req.body.username && req.body.password) {
+    let user = req.body;
+    const rounds = process.env.BCRYPT_ROUNDS || 8;
+    const hash = bcrypt.hashSync(user.password, rounds);
+    user.password = hash;
 
-  Users.add(user)
-    .then((saved) => {
-      res.status(201).json(saved);
-    })
-    .catch(next);
+    Users.add(user)
+      .then((saved) => {
+        res.status(201).json(saved);
+      })
+      .catch(next);
+  } else {
+    res.status(400).json({ message: 'Username and Password Required' });
+  }
 });
 
 router.post('/login', (req, res, next) => {
-  if (req.body) {
+  if (req.body.username && req.body.password) {
     let { username, password } = req.body;
 
     Users.findBy({ username })
